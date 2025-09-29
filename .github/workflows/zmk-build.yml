@@ -1,0 +1,164 @@
+name: ZMK Firmware Build
+
+on:
+  push:
+    branches: [ main, master, develop ]
+    paths:
+      - 'config/**'
+      - '.github/workflows/**'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - 'config/**'
+  release:
+    types: [ published ]
+  workflow_dispatch:
+    inputs:
+      board:
+        description: 'Board to build (leave empty for all)'
+        required: false
+        type: choice
+        options:
+          - all
+          - noru64_split_center
+          - noru64_split_peripheral
+      build_type:
+        description: 'Build type'
+        required: false
+        type: choice
+        options:
+          - debug
+          - release
+        default: release
+
+env:
+  ZEPHYR_TOOLCHAIN_VARIANT: zephyr
+  ZEPHYR_SDK_INSTALL_DIR: /opt/zephyr-sdk
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - board: noru64_split_center
+            name: Center
+            description: "Left side (Center) - USB connected"
+          - board: noru64_split_peripheral  
+            name: Peripheral
+            description: "Right side (Peripheral) - BLE connected"
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        fetch-depth: 0
+        
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+          
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install west pyyaml pykwalify colorama packaging
+        
+    - name: Install Zephyr SDK
+      run: |
+        if [ ! -d "$ZEPHYR_SDK_INSTALL_DIR" ]; then
+          wget -q https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.16.0/zephyr-sdk-0.16.0_linux-x86_64.tar.xz
+          tar xf zephyr-sdk-0.16.0_linux-x86_64.tar.xz
+          sudo mv zephyr-sdk-0.16.0 $ZEPHYR_SDK_INSTALL_DIR
+          sudo chown -R $(whoami) $ZEPHYR_SDK_INSTALL_DIR
+          cd $ZEPHYR_SDK_INSTALL_DIR
+          ./setup.sh -t arm-zephyr-eabi
+          ./setup.sh -t riscv64-zephyr-elf
+        fi
+        
+    - name: Set up Zephyr workspace
+      run: |
+        west init -l config
+        west update
+        west zephyr-export
+        
+    - name: Verify board configuration
+      run: |
+        echo "Building for board: ${{ matrix.board }}"
+        west build --board ${{ matrix.board }} --dry-run app -- -DZMK_CONFIG="$(pwd)/config"
+        
+    - name: Build firmware
+      run: |
+        west build -p -b ${{ matrix.board }} app -- -DZMK_CONFIG="$(pwd)/config"
+        
+    - name: Verify build output
+      run: |
+        if [ -f "build/zephyr/zmk.uf2" ]; then
+          echo "✅ UF2 firmware generated successfully"
+          ls -la build/zephyr/zmk.uf2
+        else
+          echo "❌ UF2 firmware not found"
+          ls -la build/zephyr/
+          exit 1
+        fi
+        
+    - name: Generate build info
+      run: |
+        echo "## Build Information" > build-info.md
+        echo "- **Board**: ${{ matrix.board }}" >> build-info.md
+        echo "- **Build Date**: $(date)" >> build-info.md
+        echo "- **Commit**: ${{ github.sha }}" >> build-info.md
+        echo "- **Branch**: ${{ github.ref_name }}" >> build-info.md
+        echo "- **Firmware Size**: $(stat -c%s build/zephyr/zmk.uf2) bytes" >> build-info.md
+        echo "- **Description**: ${{ matrix.description }}" >> build-info.md
+        
+    - name: Upload firmware
+      uses: actions/upload-artifact@v3
+      with:
+        name: firmware-${{ matrix.board }}-${{ github.sha }}
+        path: |
+          build/zephyr/zmk.uf2
+          build-info.md
+        retention-days: 30
+        
+    - name: Upload build logs
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: build-logs-${{ matrix.board }}-${{ github.sha }}
+        path: |
+          build/
+        retention-days: 7
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v3
+      
+    - name: Create release assets
+      run: |
+        mkdir -p release-assets
+        find . -name "*.uf2" -exec cp {} release-assets/ \;
+        find . -name "build-info.md" -exec cat {} \; > release-assets/build-summary.md
+        
+    - name: Upload release assets
+      uses: actions/upload-artifact@v3
+      with:
+        name: release-assets
+        path: release-assets/

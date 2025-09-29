@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Download all artifacts
+      uses: actions/download-artifact@v3
+      
+    - name: Prepare release assets
+      run: |
+        mkdir -p release-assets
+        
+        # Copy firmware files
+        find . -name "firmware-*.uf2" -exec cp {} release-assets/ \;
+        
+        # Create firmware archive
+        cd release-assets
+        tar -czf noru64_split_firmware_${{ github.event.release.tag_name }}.tar.gz *.uf2
+        
+        # Create build summary
+        echo "# Noru64 Split Keyboard Firmware Release" > README.md
+        echo "" >> README.md
+        echo "**Release**: ${{ github.event.release.tag_name }}" >> README.md
+        echo "**Date**: $(date)" >> README.md
+        echo "**Commit**: ${{ github.sha }}" >> README.md
+        echo "" >> README.md
+        echo "## Firmware Files" >> README.md
+        echo "" >> README.md
+        ls -la *.uf2 >> README.md
+        echo "" >> README.md
+        echo "## Installation" >> README.md
+        echo "" >> README.md
+        echo "1. Download the appropriate firmware for your board:" >> README.md
+        echo "   - \`noru64_split_center.uf2\` - Left side (Center)" >> README.md
+        echo "   - \`noru64_split_peripheral.uf2\` - Right side (Peripheral)" >> README.md
+        echo "2. Put your keyboard in bootloader mode" >> README.md
+        echo "3. Copy the firmware file to the keyboard" >> README.md
+        echo "4. Flash center first, then peripheral" >> README.md
+        
+    - name: Upload release assets
+      uses: actions/upload-artifact@v3
+      with:
+        name: release-assets
+        path: release-assets/
