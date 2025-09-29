@@ -1,0 +1,17 @@
+# Global code owners
+* @your-username
+
+# ZMK configuration files
+config/ @your-username
+
+# GitHub Actions workflows
+.github/workflows/ @your-username
+
+# Documentation
+README.md @your-username
+*.md @your-username
+
+# Build configuration
+build.yaml @your-username
+*.yml @your-username
+*.yaml @your-username
