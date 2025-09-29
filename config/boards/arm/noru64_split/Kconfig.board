@@ -1,0 +1,12 @@
+# noru64_split board configuration
+
+# Copyright (c) 2020 Eric Lau
+# SPDX-License-Identifier: MIT
+
+config BOARD_NORU64_SPLIT_CENTER
+	bool "noru64_split_center"
+	depends on SOC_NRF52840_QIAA
+
+config BOARD_NORU64_SPLIT_PERIPHERAL
+	bool "noru64_split_peripheral"
+	depends on SOC_NRF52840_QIAA

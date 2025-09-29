@@ -1,0 +1,50 @@
+# Copyright (c) 2020 Eric Lau
+# SPDX-License-Identifier: MIT
+
+if BOARD_NORU64_SPLIT_CENTER
+
+	config ZMK_KEYBOARD_NAME
+		default "Noru64 Split Center"
+
+endif # BOARD_NORU64_SPLIT_CENTER
+
+
+if BOARD_NORU64_SPLIT_PERIPHERAL
+
+	config ZMK_KEYBOARD_NAME
+		default "Noru64 Split Peripheral"
+
+endif # BOARD_NORU64_SPLIT_PERIPHERAL
+
+
+if BOARD_NORU64_SPLIT_CENTER || BOARD_NORU64_SPLIT_PERIPHERAL
+
+config BOARD
+	default "Noru64_Split"
+
+config ZMK_SPLIT
+	default y
+
+config BT_CTLR
+	default BT
+
+config ZMK_BLE
+	default y
+
+config ZMK_USB
+	default y
+
+config ZMK_BATTERY_VOLTAGE_DIVIDER
+	default y
+
+if USB
+
+config USB_NRFX
+	default y
+
+config USB_DEVICE_STACK
+	default y
+
+endif # USB
+
+endif # BOARD_NORU64_SPLIT_CENTER || BOARD_NORU64_SPLIT_PERIPHERAL
