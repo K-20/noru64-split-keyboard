@@ -49,13 +49,13 @@ jobs:
         west build -p -b ${{ matrix.board }} app -- -DZMK_CONFIG="$(pwd)/config"
         
     - name: Upload firmware artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: firmware-${{ matrix.board }}
         path: build/zephyr/zmk.uf2
         
     - name: Upload build logs
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: build-logs-${{ matrix.board }}
