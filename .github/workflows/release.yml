@@ -20,7 +20,7 @@ jobs:
         mkdir -p release-assets
         
         # Copy firmware files
-        find . -name "firmware-*.uf2" -exec cp {} release-assets/ \;
+        find . -name "*.uf2" -exec cp {} release-assets/ \;
         
         # Create firmware archive
         cd release-assets
