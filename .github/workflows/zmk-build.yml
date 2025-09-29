@@ -97,20 +97,20 @@ jobs:
     - name: Verify board configuration
       run: |
         echo "Building for board: ${{ matrix.board }}"
-        west build --board ${{ matrix.board }} --dry-run app -- -DZMK_CONFIG="$(pwd)/config"
+        west build --board ${{ matrix.board }} --dry-run zmk/app -- -DZMK_CONFIG="$(pwd)/config"
         
     - name: Build firmware
       run: |
-        west build -p -b ${{ matrix.board }} app -- -DZMK_CONFIG="$(pwd)/config"
+        west build -p -b ${{ matrix.board }} zmk/app -- -DZMK_CONFIG="$(pwd)/config"
         
     - name: Verify build output
       run: |
-        if [ -f "build/zephyr/zmk.uf2" ]; then
+        if [ -f "zmk/app/build/zephyr/zmk.uf2" ]; then
           echo "✅ UF2 firmware generated successfully"
-          ls -la build/zephyr/zmk.uf2
+          ls -la zmk/app/build/zephyr/zmk.uf2
         else
           echo "❌ UF2 firmware not found"
-          ls -la build/zephyr/
+          ls -la zmk/app/build/zephyr/
           exit 1
         fi
         
@@ -121,7 +121,7 @@ jobs:
         echo "- **Build Date**: $(date)" >> build-info.md
         echo "- **Commit**: ${{ github.sha }}" >> build-info.md
         echo "- **Branch**: ${{ github.ref_name }}" >> build-info.md
-        echo "- **Firmware Size**: $(stat -c%s build/zephyr/zmk.uf2) bytes" >> build-info.md
+        echo "- **Firmware Size**: $(stat -c%s zmk/app/build/zephyr/zmk.uf2) bytes" >> build-info.md
         echo "- **Description**: ${{ matrix.description }}" >> build-info.md
         
     - name: Upload firmware
@@ -129,7 +129,7 @@ jobs:
       with:
         name: firmware-${{ matrix.board }}-${{ github.sha }}
         path: |
-          build/zephyr/zmk.uf2
+          zmk/app/build/zephyr/zmk.uf2
           build-info.md
         retention-days: 30
         
@@ -139,7 +139,7 @@ jobs:
       with:
         name: build-logs-${{ matrix.board }}-${{ github.sha }}
         path: |
-          build/
+          zmk/app/build/
         retention-days: 7
 
   release:
